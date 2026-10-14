@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sky Quiz IPAS - Ekosistem Kelas 3 SD</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .font-game {
+            font-family: 'Fredoka', cursive;
+        }
+        canvas {
+            display: block;
+            touch-action: none;
+        }
+        @keyframes pulse-slow {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+        .animate-pulse-slow {
+            animation: pulse-slow 2s infinite ease-in-out;
+        }
+        .backdrop-blur-md {
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-800 h-full overflow-hidden select-none flex flex-col justify-center items-center">
+
+    <div id="app-container" class="relative w-full max-w-4xl h-full max-h-[850px] bg-gradient-to-b from-indigo-300 via-sky-300 to-sky-100 flex flex-col overflow-hidden sm:rounded-3xl shadow-2xl border-4 border-sky-300/50">
+
+        <!-- Top HUD Navigation Bar -->
+        <header class="relative z-20 bg-white/80 backdrop-blur-md px-4 py-2.5 flex items-center justify-between border-b border-white/40 shadow-sm">
+            <div class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-500 text-white flex items-center justify-center font-game text-xl shadow-md">
+                    🚀
+                </div>
+                <div>
+                    <h1 class="font-game text-sky-900 text-base sm:text-lg leading-none">Sky Quiz Shooter</h1>
+                    <span class="text-[10px] sm:text-xs font-semibold text-sky-700">Terbang Ke Atas - IPAS SD 3</span>
+                </div>
+            </div>
+
+            <!-- In-game Stats HUD -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Finish Line Progress Meter -->
+                <div class="hidden sm:flex items-center gap-2 bg-sky-100/90 border border-sky-300 px-2.5 py-1 rounded-xl shadow-inner">
+                    <i class="fa-solid fa-flag-checkered text-sky-700 text-xs"></i>
+                    <div class="w-20 bg-slate-200 h-2 rounded-full overflow-hidden">
+                        <div id="finish-progress-bar" class="bg-emerald-500 h-full w-0 transition-all duration-300"></div>
+                    </div>
+                </div>
+
+                <!-- Heart Lives -->
+                <div id="fuel-container" class="bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-xl flex items-center gap-1 shadow-inner">
+                    <i class="fa-solid fa-heart text-rose-500 text-xs animate-pulse"></i>
+                    <i class="fa-solid fa-heart text-rose-500 text-xs animate-pulse"></i>
+                    <i class="fa-solid fa-heart text-rose-500 text-xs animate-pulse"></i>
+                </div>
+
+                <!-- Score Counter -->
+                <div class="bg-amber-100/90 border border-amber-300 px-3 py-1 rounded-xl flex items-center gap-1.5 shadow-inner">
+                    <i class="fa-solid fa-star text-amber-500 text-xs"></i>
+                    <span id="score-text" class="font-game text-amber-900 text-xs sm:text-sm">0</span>
+                </div>
+
+                <!-- Fullscreen Toggle Button -->
+                <button id="btn-fullscreen" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition border border-slate-300 active:scale-95" title="Layar Penuh">
+                    <i class="fa-solid fa-expand text-xs sm:text-sm"></i>
+                </button>
+
+                <!-- Mute Audio Button -->
+                <button id="btn-audio" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition border border-slate-300 active:scale-95">
+                    <i class="fa-solid fa-volume-high text-xs sm:text-sm"></i>
+                </button>
+            </div>
+        </header>
+
+        <main class="relative flex-1 w-full overflow-hidden flex flex-col justify-center">
+            <!-- Canvas layer for sky flying gameplay -->
+            <canvas id="sky-canvas" class="absolute inset-0 z-0 w-full h-full"></canvas>
+
+            <!-- On-Screen Controls for Mobile Devices (Directional Pad & Fire) -->
+            <div id="touch-controls" class="hidden absolute bottom-4 inset-x-4 z-30 flex justify-between items-end opacity-90 px-2 pointer-events-none">
+                <!-- Directional Controller D-Pad -->
+                <div class="grid grid-cols-3 gap-1 pointer-events-auto w-36">
+                    <div></div>
+                    <button id="btn-up" class="w-11 h-11 bg-white/90 backdrop-blur-md rounded-xl border border-sky-400 text-sky-900 font-bold text-lg active:bg-sky-300 shadow-md flex items-center justify-center active:scale-95">⬆️</button>
+                    <div></div>
+
+                    <button id="btn-left" class="w-11 h-11 bg-white/90 backdrop-blur-md rounded-xl border border-sky-400 text-sky-900 font-bold text-lg active:bg-sky-300 shadow-md flex items-center justify-center active:scale-95">⬅️</button>
+                    <button id="btn-down" class="w-11 h-11 bg-white/90 backdrop-blur-md rounded-xl border border-sky-400 text-sky-900 font-bold text-lg active:bg-sky-300 shadow-md flex items-center justify-center active:scale-95">⬇️</button>
+                    <button id="btn-right" class="w-11 h-11 bg-white/90 backdrop-blur-md rounded-xl border border-sky-400 text-sky-900 font-bold text-lg active:bg-sky-300 shadow-md flex items-center justify-center active:scale-95">➡️</button>
+                </div>
+
+                <!-- Big Fire Laser Button -->
+                <div class="pointer-events-auto">
+                    <button id="btn-shoot" class="w-20 h-20 bg-gradient-to-tr from-amber-500 to-rose-500 rounded-full border-4 border-white text-white font-game text-sm shadow-2xl flex flex-col items-center justify-center active:scale-90 transition transform">
+                        <span class="text-2xl">🔥</span>
+                        <span class="text-[10px] uppercase font-bold tracking-wider">Tembak</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Start Menu Screen -->
+            <div id="screen-start" class="relative z-20 p-4 sm:p-6 flex flex-col items-center justify-center text-center my-auto max-w-lg mx-auto w-full">
+                <div class="bg-white/90 backdrop-blur-md p-6 sm:p-8 rounded-3xl border-2 border-white/90 shadow-2xl w-full flex flex-col items-center">
+                    <div class="w-20 h-20 bg-sky-100 rounded-3xl border-4 border-sky-400 flex items-center justify-center text-4xl mb-3 shadow-inner animate-bounce">
+                        🚀
+                    </div>
+                    <h2 class="font-game text-sky-950 text-2xl sm:text-3xl mb-1">Sky Quiz Shooter</h2>
+                    <p class="text-sky-800 font-medium text-xs sm:text-sm mb-4">Terbang Ke Atas Langit IPAS Kelas 3 SD</p>
+
+                    <div class="bg-sky-50 text-sky-900 p-3.5 rounded-2xl border border-sky-200 text-xs sm:text-sm mb-5 text-left w-full space-y-1.5 shadow-inner">
+                        <div class="font-bold text-sky-950 flex items-center gap-1.5">
+                            <i class="fa-solid fa-gamepad text-sky-600"></i> Cara Bermain:
+                        </div>
+                        <ul class="list-disc list-inside text-slate-700 space-y-1 text-xs">
+                            <li>Pesawat **terbang mendaki ke atas** melintasi awan.</li>
+                            <li>Kendalikan pesawat (`Panah / W,A,S,D`).</li>
+                            <li>Tekan **[SPASI]** atau **Tombol TEMBAK 🔥** ke arah atas.</li>
+                            <li>Tembak **Awan Kuis ☁️❓** untuk memicu pertanyaan IPAS.</li>
+                            <li>Jika jawaban **SALAH**, nyawa berkurang 1 (Total 3 Nyawa).</li>
+                            <li>Tembak **Petir 🌩️** agar tidak menabrak pesawat!</li>
+                        </ul>
+                    </div>
+
+                    <!-- Aircraft Selection -->
+                    <div class="w-full mb-5">
+                        <label class="block font-game text-sky-900 text-xs sm:text-sm mb-2 text-left">Pilih Pesawat Favoritmu:</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button data-plane="red" class="plane-select-btn bg-white p-2.5 rounded-2xl border-2 border-sky-500 hover:bg-sky-50 transition flex flex-col items-center gap-1 active:scale-95 shadow-sm">
+                                <span class="text-2xl">🚀</span>
+                                <span class="text-[11px] font-bold text-slate-700">Roket</span>
+                            </button>
+                            <button data-plane="yellow" class="plane-select-btn bg-white p-2.5 rounded-2xl border-2 border-transparent hover:bg-sky-50 transition flex flex-col items-center gap-1 active:scale-95 shadow-sm">
+                                <span class="text-2xl">🛩️</span>
+                                <span class="text-[11px] font-bold text-slate-700">Jet Tempur</span>
+                            </button>
+                            <button data-plane="space" class="plane-select-btn bg-white p-2.5 rounded-2xl border-2 border-transparent hover:bg-sky-50 transition flex flex-col items-center gap-1 active:scale-95 shadow-sm">
+                                <span class="text-2xl">🚁</span>
+                                <span class="text-[11px] font-bold text-slate-700">Helikopter</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button id="btn-start" class="w-full py-3.5 px-6 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-game text-lg sm:text-xl rounded-2xl shadow-lg hover:shadow-xl transition transform active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-play"></i> Mulai Terbang Ke Atas!
+                    </button>
+                </div>
+            </div>
+
+            <!-- Question Interactive Screen Overlay -->
+            <div id="screen-quiz" class="hidden absolute inset-0 z-40 bg-slate-900/60 backdrop-blur-md p-4 flex items-center justify-center">
+                <div class="bg-white p-5 sm:p-7 rounded-3xl border-4 border-sky-300 shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto flex flex-col animate-pulse-slow">
+                    
+                    <!-- Progress & Category Header -->
+                    <div class="flex items-center justify-between mb-3">
+                        <span id="question-number" class="bg-sky-100 text-sky-800 text-xs font-bold px-3 py-1 rounded-xl">Soal 1 / 10</span>
+                        <span id="question-category" class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-xl">Ekosistem</span>
+                    </div>
+
+                    <!-- Question Bar -->
+                    <div class="w-full bg-slate-100 rounded-full h-2 mb-4 overflow-hidden">
+                        <div id="progress-bar" class="bg-gradient-to-r from-sky-500 to-indigo-500 h-2 rounded-full transition-all duration-300" style="width: 10%"></div>
+                    </div>
+
+                    <!-- Question Text -->
+                    <h3 id="question-text" class="font-bold text-slate-800 text-sm sm:text-base leading-snug mb-5 text-center">
+                        Pertanyaan kuis akan ditampilkan di sini...
+                    </h3>
+
+                    <!-- Answer Buttons Grid -->
+                    <div id="answers-grid" class="grid grid-cols-1 gap-2.5 mb-2">
+                        <!-- Options injected dynamically by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Answer Feedback Modal Popup -->
+            <div id="modal-feedback" class="hidden absolute inset-0 z-50 bg-slate-900/70 backdrop-blur-md p-4 flex items-center justify-center">
+                <div class="bg-white p-6 rounded-3xl border-4 border-sky-400 shadow-2xl w-full max-w-md text-center flex flex-col items-center">
+                    <div id="feedback-icon" class="text-5xl mb-2">🎉</div>
+                    <h3 id="feedback-title" class="font-game text-2xl text-emerald-600 mb-2">Jawaban Benar!</h3>
+                    
+                    <div class="bg-sky-50 border border-sky-200 p-3.5 rounded-2xl text-xs sm:text-sm text-slate-700 mb-5 text-left w-full shadow-inner">
+                        <b class="text-sky-900 block mb-1">Penjelasan Edukasi:</b>
+                        <span id="feedback-explanation">Penjelasan singkat materi IPAS akan tampil di sini.</span>
+                    </div>
+
+                    <button id="btn-next-question" class="w-full py-3 bg-sky-500 hover:bg-sky-600 text-white font-game text-base rounded-2xl shadow-md transition active:scale-95 flex items-center justify-center gap-2">
+                        <span>Lanjut Terbang Ke Finish</span> <i class="fa-solid fa-arrow-up"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Game Result Screen -->
+            <div id="screen-result" class="hidden relative z-20 p-4 sm:p-6 flex flex-col items-center justify-center text-center my-auto max-w-lg mx-auto w-full">
+                <div class="bg-white/90 backdrop-blur-md p-6 sm:p-8 rounded-3xl border-4 border-white shadow-2xl w-full flex flex-col items-center">
+                    
+                    <div id="result-badge" class="text-5xl mb-2">🏆</div>
+                    <h2 id="result-title" class="font-game text-sky-950 text-2xl sm:text-3xl mb-1">Misi Selesai!</h2>
+                    <p id="result-subtitle" class="text-slate-600 text-xs sm:text-sm mb-4">Kamu berhasil mencapai puncak langit!</p>
+
+                    <!-- Star Rating -->
+                    <div id="star-rating" class="flex gap-2 text-2xl sm:text-3xl mb-4 text-amber-400">
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                    </div>
+
+                    <!-- Final Stats Grid -->
+                    <div class="grid grid-cols-2 gap-3 w-full mb-5">
+                        <div class="bg-amber-50 border border-amber-200 p-3 rounded-2xl">
+                            <span class="text-[11px] font-bold text-amber-800 uppercase block">Total Skor</span>
+                            <span id="final-score" class="font-game text-2xl text-amber-600">0</span>
+                        </div>
+                        <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl">
+                            <span class="text-[11px] font-bold text-emerald-800 uppercase block">Soal Benar</span>
+                            <span id="final-correct" class="font-game text-2xl text-emerald-600">0 / 10</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row gap-2.5 w-full">
+                        <button id="btn-review" class="flex-1 py-3 bg-indigo-100 hover:bg-indigo-200 text-indigo-900 font-bold text-xs sm:text-sm rounded-2xl transition border border-indigo-300 flex items-center justify-center gap-1.5 active:scale-95">
+                            <i class="fa-solid fa-book-open"></i> Review Pembahasan
+                        </button>
+                        <button id="btn-restart" class="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-game text-sm sm:text-base rounded-2xl shadow-md transition flex items-center justify-center gap-1.5 active:scale-95">
+                            <i class="fa-solid fa-rotate-right"></i> Main Lagi
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review Questions Modal -->
+            <div id="modal-review" class="hidden absolute inset-0 z-50 bg-slate-900/80 backdrop-blur-md p-4 flex items-center justify-center">
+                <div class="bg-white p-5 rounded-3xl border-2 border-indigo-200 shadow-2xl w-full max-w-xl max-h-[85vh] flex flex-col">
+                    <div class="flex items-center justify-between mb-4 pb-2 border-b">
+                        <h3 class="font-game text-indigo-950 text-xl flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-indigo-600"></i> Review Pembahasan IPAS
+                        </h3>
+                        <button id="btn-close-review" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center font-bold">✕</button>
+                    </div>
+
+                    <div id="review-list" class="flex-1 overflow-y-auto space-y-3 pr-1 text-left">
+                        <!-- Injected dynamically -->
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // 10 IPAS Grade 3 Elementary Curriculum Questions
+        const quizQuestions = [
+            {
+                category: "Pengertian Ekosistem",
+                question: "Apa yang dimaksud dengan Ekosistem?",
+                options: [
+                    "Hubungan timbal balik antara makhluk hidup dengan lingkungannya",
+                    "Kumpulan hewan berbisa di tengah hutan rimba",
+                    "Tempat tinggal manusia di dalam rumah yang bersih",
+                    "Proses hujan turun dari awan ke permukaan bumi"
+                ],
+                correct: 0,
+                explanation: "Ekosistem adalah hubungan saling mempengaruhi antara makhluk hidup (biotik) dan benda tak hidup (abiotik) di lingkungan sekitarnya."
+            },
+            {
+                category: "Komponen Ekosistem",
+                question: "Manakah kelompok yang semuanya termasuk komponen BIOTIK (makhluk hidup) di sawah?",
+                options: [
+                    "Air, Batu, dan Tanah",
+                    "Padi, Belalang, dan Katak",
+                    "Cahaya Matahari, Udara, dan Padi",
+                    "Angin, Air, dan Ular"
+                ],
+                correct: 1,
+                explanation: "Komponen Biotik terdiri dari semua makhluk hidup seperti tumbuhan (padi) dan hewan (belalang, katak)."
+            },
+            {
+                category: "Komponen Ekosistem",
+                question: "Sinar matahari, air, tanah, dan udara adalah contoh dari komponen...",
+                options: [
+                    "Biotik (Makhluk Hidup)",
+                    "Abiotik (Benda Tak Hidup)",
+                    "Pengurai",
+                    "Konsumen Utama"
+                ],
+                correct: 1,
+                explanation: "Komponen Abiotik adalah benda-benda tak hidup yang sangat dibutuhkan makhluk hidup untuk bertahan hidup."
+            },
+            {
+                category: "Rantai Makanan",
+                question: "Dalam rantai makanan, tumbuhan hijau berperan sebagai PRODUSEN karena...",
+                options: [
+                    "Memakan hewan-hewan kecil di sekitarnya",
+                    "Dapat membuat makanannya sendiri melalui fotosintesis",
+                    "Menguraikan sisa-sisa hewan yang telah mati",
+                    "Membutuhkan daging untuk bertahan hidup"
+                ],
+                correct: 1,
+                explanation: "Tumbuhan hijau disebut Produsen karena bisa memasak/membuat makanan sendiri dengan bantuan sinar matahari (Fotosintesis)."
+            },
+            {
+                category: "Jenis Makanan",
+                question: "Hewan seperti Sapi, Kelinci, dan Belalang hanya memakan tumbuhan. Hewan ini disebut...",
+                options: [
+                    "Karnivora (Pemakan Daging)",
+                    "Herbivora (Pemakan Tumbuhan)",
+                    "Omnivora (Pemakan Segala)",
+                    "Pengurai / Dekomposer"
+                ],
+                correct: 1,
+                explanation: "Herbivora adalah hewan yang sumber makanan utamanya berasal dari tumbuh-tumbuhan."
+            },
+            {
+                category: "Rantai Makanan",
+                question: "Ayam memakan biji jagung dan juga memakan cacing tanah. Ayam tergolong hewan...",
+                options: [
+                    "Herbivora",
+                    "Karnivora",
+                    "Omnivora",
+                    "Produsen"
+                ],
+                correct: 2,
+                explanation: "Omnivora adalah hewan pemakan segala (memakan tumbuhan sekaligus daging/hewan lain)."
+            },
+            {
+                category: "Peran Pengurai",
+                question: "Siapakah yang bertugas menguraikan sisa makhluk hidup yang mati menjadi nutrisi pupuk tanah?",
+                options: [
+                    "Rumput dan Pohon",
+                    "Jamur dan Bakteri",
+                    "Burung Elang dan Ular",
+                    "Ikan dan Katak"
+                ],
+                correct: 1,
+                explanation: "Pengurai (Dekomposer) seperti jamur dan bakteri menghancurkan sisa makhluk hidup mati menjadi zat hara untuk menyuburkan tanah."
+            },
+            {
+                category: "Rantai Makanan Sawah",
+                question: "Urutan Rantai Makanan yang BENAR di ekosistem sawah adalah...",
+                options: [
+                    "Padi ➔ Belalang ➔ Katak ➔ Ular",
+                    "Katak ➔ Padi ➔ Ular ➔ Belalang",
+                    "Ular ➔ Katak ➔ Belalang ➔ Padi",
+                    "Belalang ➔ Padi ➔ Ular ➔ Katak"
+                ],
+                correct: 0,
+                explanation: "Urutan yang benar: Padi (Produsen) dimakan Belalang (Konsumen I), dimakan Katak (Konsumen II), dimakan Ular (Konsumen III)."
+            },
+            {
+                category: "Keseimbangan Ekosistem",
+                question: "Apa yang terjadi pada rantai makanan jika populasi KATAK di sawah habis diburu?",
+                options: [
+                    "Jumlah belalang akan semakin banyak merusak padi",
+                    "Jumlah ular akan makin bertambah banyak",
+                    "Tanaman padi tumbuh makin lebat",
+                    "Tidak ada pengaruh apa-apa"
+                ],
+                correct: 0,
+                explanation: "Jika pemangsa belalang (katak) habis, belalang akan berkembang biak sangat banyak dan memakan tanaman padi hingga habis."
+            },
+            {
+                category: "Fungsi Matahari",
+                question: "Cahaya matahari sangat penting bagi ekosistem karena menjadi sumber energi utama untuk...",
+                options: [
+                    "Tumbuhan hijau melakukan fotosintesis",
+                    "Hewan karnivora berburu di malam hari",
+                    "Pengurai menghancurkan batu batuan",
+                    "Membuat air laut menjadi tawar"
+                ],
+                correct: 0,
+                explanation: "Matahari memberikan energi panas dan cahaya yang merupakan energi utama untuk proses fotosintesis tumbuhan hijau."
+            }
+        ];
+
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playBeep(freq, type, duration, vol = 0.1) {
+                if (!this.enabled) return;
+                try {
+                    this.init();
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {}
+            }
+
+            shoot() {
+                this.playBeep(900, 'square', 0.08, 0.12);
+            }
+
+            explode() {
+                this.playBeep(130, 'sawtooth', 0.25, 0.2);
+            }
+
+            correct() {
+                if (!this.enabled) return;
+                this.playBeep(523.25, 'sine', 0.15, 0.2);
+                setTimeout(() => this.playBeep(659.25, 'sine', 0.15, 0.2), 100);
+                setTimeout(() => this.playBeep(783.99, 'sine', 0.3, 0.2), 200);
+            }
+
+            wrong() {
+                if (!this.enabled) return;
+                this.playBeep(300, 'sawtooth', 0.2, 0.15);
+                setTimeout(() => this.playBeep(220, 'sawtooth', 0.3, 0.15), 150);
+            }
+
+            click() {
+                this.playBeep(400, 'triangle', 0.05, 0.1);
+            }
+
+            powerup() {
+                if (!this.enabled) return;
+                this.playBeep(440, 'sine', 0.1, 0.15);
+                setTimeout(() => this.playBeep(880, 'sine', 0.2, 0.2), 80);
+            }
+
+            victory() {
+                if (!this.enabled) return;
+                const notes = [400, 500, 600, 800];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => this.playBeep(freq, 'sine', 0.2, 0.2), idx * 120);
+                });
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        let state = {
+            planeType: 'red',
+            currentIdx: 0,
+            score: 0,
+            fuel: 3, // Total 3 Lives
+            correctCount: 0,
+            answersHistory: [],
+            isPlaying: false,
+            isQuestionActive: false,
+            lastShootTime: 0
+        };
+
+        const canvas = document.getElementById('sky-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Plane position: Flying UPWARDS from bottom area of screen
+        let plane = {
+            x: 200,
+            y: 400,
+            speed: 6.5,
+            radius: 24
+        };
+
+        const keys = {
+            ArrowUp: false,
+            ArrowDown: false,
+            ArrowLeft: false,
+            ArrowRight: false,
+            w: false,
+            s: false,
+            a: false,
+            d: false,
+            Space: false
+        };
+
+        let clouds = [];
+        let bullets = [];
+        let particles = [];
+        let interactables = [];
+        let animFrameId;
+        let lastSpawnTime = 0;
+
+        function resizeCanvas() {
+            if (!canvas || !canvas.parentElement) return;
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            if (!state.isPlaying) {
+                plane.x = canvas.width / 2;
+                plane.y = canvas.height - 120;
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.key === ' ') {
+                e.preventDefault();
+                keys.Space = true;
+                shootBullet();
+            }
+            const key = e.key;
+            if (keys.hasOwnProperty(key) || keys.hasOwnProperty(key.toLowerCase())) {
+                keys[key] = true;
+                keys[key.toLowerCase()] = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' || e.key === ' ') {
+                keys.Space = false;
+            }
+            const key = e.key;
+            if (keys.hasOwnProperty(key) || keys.hasOwnProperty(key.toLowerCase())) {
+                keys[key] = false;
+                keys[key.toLowerCase()] = false;
+            }
+        });
+
+        function bindTouchControl(id, actionCallback) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+
+            const trigger = (e) => {
+                e.preventDefault();
+                actionCallback(true);
+            };
+            const release = (e) => {
+                e.preventDefault();
+                actionCallback(false);
+            };
+
+            btn.addEventListener('touchstart', trigger, {passive: false});
+            btn.addEventListener('touchend', release, {passive: false});
+            btn.addEventListener('mousedown', trigger);
+            btn.addEventListener('mouseup', release);
+            btn.addEventListener('mouseleave', release);
+        }
+
+        function initClouds() {
+            clouds = [];
+            for (let i = 0; i < 10; i++) {
+                clouds.push({
+                    x: Math.random() * (canvas.width || 800),
+                    y: Math.random() * (canvas.height || 600),
+                    size: Math.random() * 35 + 25,
+                    speed: Math.random() * 1.5 + 1.0 // Clouds scroll DOWNWARD
+                });
+            }
+        }
+
+        function shootBullet() {
+            if (!state.isPlaying || state.isQuestionActive) return;
+            const now = Date.now();
+            if (now - state.lastShootTime < 200) return; // Fire rate limit
+            state.lastShootTime = now;
+
+            sound.shoot();
+            // Bullet moves UPWARDS
+            bullets.push({
+                x: plane.x,
+                y: plane.y - 25,
+                speed: 13,
+                radius: 5
+            });
+        }
+
+        function spawnInteractable() {
+            if (!state.isPlaying || state.isQuestionActive) return;
+
+            const now = Date.now();
+            if (now - lastSpawnTime < 1700) return;
+            lastSpawnTime = now;
+
+            const rand = Math.random();
+            let chosenType = 'obstacle';
+
+            if (rand < 0.55 && state.currentIdx < quizQuestions.length) {
+                chosenType = 'question';
+            } else if (rand < 0.80) {
+                chosenType = 'obstacle'; // Storm / Enemy Obstacle
+            } else if (rand < 0.92) {
+                chosenType = 'booster'; // Star +20
+            } else {
+                chosenType = 'fuel'; // Extra life fuel
+            }
+
+            // Items spawn at TOP (-40) and move DOWNWARD
+            const newObj = {
+                type: chosenType,
+                x: Math.random() * (canvas.width - 100) + 50,
+                y: -40,
+                radius: 30,
+                speed: Math.random() * 1.5 + 2.0
+            };
+
+            interactables.push(newObj);
+        }
+
+        function updatePlanePosition() {
+            if (!state.isPlaying || state.isQuestionActive) return;
+
+            // 4-Direction movement (Left, Right, Up, Down)
+            if (keys.ArrowUp || keys.w) plane.y -= plane.speed;
+            if (keys.ArrowDown || keys.s) plane.y += plane.speed;
+            if (keys.ArrowLeft || keys.a) plane.x -= plane.speed;
+            if (keys.ArrowRight || keys.d) plane.x += plane.speed;
+
+            // Strict canvas boundary collisions
+            const padX = 30;
+            const padY = 40;
+            plane.x = Math.max(padX, Math.min(canvas.width - padX, plane.x));
+            plane.y = Math.max(padY, Math.min(canvas.height - padY, plane.y));
+        }
+
+        function updateBulletsAndCollisions() {
+            if (!state.isPlaying || state.isQuestionActive) return;
+
+            // Move bullets UPWARDS
+            for (let b = bullets.length - 1; b >= 0; b--) {
+                const bullet = bullets[b];
+                bullet.y -= bullet.speed;
+
+                // Remove out-of-bounds bullets (top)
+                if (bullet.y < -20) {
+                    bullets.splice(b, 1);
+                    continue;
+                }
+
+                // Check bullet collisions with obstacles
+                for (let i = interactables.length - 1; i >= 0; i--) {
+                    const obj = interactables[i];
+                    const dist = Math.hypot(bullet.x - obj.x, bullet.y - obj.y);
+
+                    if (dist < bullet.radius + obj.radius) {
+                        bullets.splice(b, 1);
+
+                        if (obj.type === 'question') {
+                            interactables.splice(i, 1);
+                            sound.powerup();
+                            triggerQuestionModal();
+                        } else if (obj.type === 'obstacle') {
+                            sound.explode();
+                            createExplosion(obj.x, obj.y, '#f97316');
+                            state.score += 10;
+                            updateHUD();
+                            interactables.splice(i, 1);
+                        } else if (obj.type === 'booster') {
+                            sound.powerup();
+                            createExplosion(obj.x, obj.y, '#facc15');
+                            state.score += 20;
+                            updateHUD();
+                            interactables.splice(i, 1);
+                        } else if (obj.type === 'fuel') {
+                            sound.powerup();
+                            if (state.fuel < 3) state.fuel++;
+                            updateHUD();
+                            interactables.splice(i, 1);
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // Check plane collisions with incoming obstacles moving down
+            for (let i = interactables.length - 1; i >= 0; i--) {
+                const obj = interactables[i];
+                const dist = Math.hypot(plane.x - obj.x, plane.y - obj.y);
+
+                if (dist < plane.radius + obj.radius) {
+                    interactables.splice(i, 1);
+
+                    if (obj.type === 'question') {
+                        sound.powerup();
+                        triggerQuestionModal();
+                    } else if (obj.type === 'obstacle') {
+                        // Hit storm -> -1 Life
+                        sound.wrong();
+                        createExplosion(plane.x, plane.y, '#ef4444');
+                        state.fuel--;
+                        updateHUD();
+                        if (state.fuel <= 0) {
+                            endGame();
+                        }
+                    } else if (obj.type === 'booster') {
+                        sound.powerup();
+                        state.score += 20;
+                        updateHUD();
+                    } else if (obj.type === 'fuel') {
+                        sound.powerup();
+                        if (state.fuel < 3) state.fuel++;
+                        updateHUD();
+                    }
+                }
+            }
+        }
+
+        function createExplosion(x, y, color) {
+            for (let p = 0; p < 12; p++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 7,
+                    vy: (Math.random() - 0.5) * 7,
+                    radius: Math.random() * 5 + 2,
+                    alpha: 1,
+                    color: color
+                });
+            }
+        }
+
+        function drawClouds() {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+            clouds.forEach(cloud => {
+                ctx.beginPath();
+                ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.size * 0.5, cloud.y - cloud.size * 0.2, cloud.size * 0.7, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.size, cloud.y, cloud.size * 0.8, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (!state.isQuestionActive) {
+                    // Clouds scroll DOWNWARD to simulate flying UP
+                    cloud.y += cloud.speed;
+                    if (cloud.y - cloud.size > canvas.height) {
+                        cloud.y = -cloud.size * 2;
+                        cloud.x = Math.random() * canvas.width;
+                    }
+                }
+            });
+        }
+
+        function drawInteractables() {
+            interactables.forEach((obj, idx) => {
+                ctx.save();
+                ctx.translate(obj.x, obj.y);
+
+                if (obj.type === 'question') {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowColor = 'rgba(14, 165, 233, 0.8)';
+                    ctx.shadowBlur = 15;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, obj.radius + 2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.font = '22px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('☁️❓', 0, 0);
+                } else if (obj.type === 'booster') {
+                    ctx.font = '26px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('⭐', 0, 0);
+                } else if (obj.type === 'fuel') {
+                    ctx.font = '24px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('⛽', 0, 0);
+                } else if (obj.type === 'obstacle') {
+                    ctx.font = '26px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🌩️', 0, 0);
+                }
+
+                ctx.restore();
+
+                if (!state.isQuestionActive) {
+                    // Objects scroll DOWNWARDS towards the airplane
+                    obj.y += obj.speed;
+                }
+
+                if (obj.y - obj.radius > canvas.height + 30) {
+                    interactables.splice(idx, 1);
+                }
+            });
+        }
+
+        function drawBullets() {
+            ctx.fillStyle = '#f59e0b';
+            bullets.forEach(b => {
+                ctx.save();
+                ctx.shadowColor = '#f59e0b';
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        function drawPlane() {
+            let planeIcon = '🚀';
+            if (state.planeType === 'yellow') planeIcon = '🛩️';
+            if (state.planeType === 'space') planeIcon = '🚁';
+
+            ctx.font = '38px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Slight banking tilt when moving left or right
+            let tilt = 0;
+            if (keys.ArrowLeft || keys.a) tilt = -0.15;
+            if (keys.ArrowRight || keys.d) tilt = 0.15;
+
+            ctx.save();
+            ctx.translate(plane.x, plane.y);
+            ctx.rotate(tilt);
+            
+            // Jet emoji orientation adjustment facing UP ⬆️
+            if (state.planeType === 'yellow') {
+                ctx.rotate(-Math.PI / 4);
+            }
+
+            ctx.fillText(planeIcon, 0, 0);
+            ctx.restore();
+
+            // Downward thruster engine smoke trail
+            if (state.isPlaying && !state.isQuestionActive && Math.random() < 0.7) {
+                particles.push({
+                    x: plane.x + (Math.random() * 8 - 4),
+                    y: plane.y + 22,
+                    vx: (Math.random() - 0.5) * 1.5,
+                    vy: Math.random() * 2 + 2, // Downward exhaust
+                    radius: Math.random() * 4 + 2,
+                    alpha: 0.8,
+                    color: state.planeType === 'red' ? '#f97316' : '#ffffff'
+                });
+            }
+        }
+
+        function drawParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.alpha;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+
+                p.x += p.vx || 0;
+                p.y += p.vy || 2;
+                p.alpha -= 0.03;
+
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        function animateCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawClouds();
+            drawInteractables();
+            drawBullets();
+            drawParticles();
+
+            updatePlanePosition();
+            updateBulletsAndCollisions();
+            spawnInteractable();
+
+            drawPlane();
+            animFrameId = requestAnimationFrame(animateCanvas);
+        }
+
+        const screenStart = document.getElementById('screen-start');
+        const screenQuiz = document.getElementById('screen-quiz');
+        const screenResult = document.getElementById('screen-result');
+        const modalFeedback = document.getElementById('modal-feedback');
+        const modalReview = document.getElementById('modal-review');
+        const touchControls = document.getElementById('touch-controls');
+
+        function updateHUD() {
+            const scoreEl = document.getElementById('score-text');
+            if (scoreEl) scoreEl.innerText = state.score;
+
+            const progressBar = document.getElementById('finish-progress-bar');
+            if (progressBar) {
+                const pct = (state.currentIdx / quizQuestions.length) * 100;
+                progressBar.style.width = `${pct}%`;
+            }
+
+            const fuelContainer = document.getElementById('fuel-container');
+            if (fuelContainer) {
+                fuelContainer.innerHTML = '';
+                for (let i = 0; i < 3; i++) {
+                    const icon = document.createElement('i');
+                    if (i < state.fuel) {
+                        icon.className = 'fa-solid fa-heart text-rose-500 text-xs animate-pulse';
+                    } else {
+                        icon.className = 'fa-regular fa-heart text-slate-300 text-xs';
+                    }
+                    fuelContainer.appendChild(icon);
+                }
+            }
+        }
+
+        function triggerQuestionModal() {
+            if (state.currentIdx >= quizQuestions.length) {
+                endGame();
+                return;
+            }
+
+            state.isQuestionActive = true;
+            if (screenQuiz) screenQuiz.classList.remove('hidden');
+            loadQuestion();
+        }
+
+        function startGame() {
+            sound.click();
+            state.currentIdx = 0;
+            state.score = 0;
+            state.fuel = 3;
+            state.correctCount = 0;
+            state.answersHistory = [];
+            state.isPlaying = true;
+            state.isQuestionActive = false;
+
+            plane.x = canvas.width / 2;
+            plane.y = canvas.height - 120;
+            interactables = [];
+            bullets = [];
+
+            if (screenStart) screenStart.classList.add('hidden');
+            if (screenResult) screenResult.classList.add('hidden');
+            if (screenQuiz) screenQuiz.classList.add('hidden');
+
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+                if (touchControls) touchControls.classList.remove('hidden');
+            }
+
+            updateHUD();
+        }
+
+        function loadQuestion() {
+            const q = quizQuestions[state.currentIdx];
+
+            const qNum = document.getElementById('question-number');
+            const qCat = document.getElementById('question-category');
+            const qText = document.getElementById('question-text');
+            const pBar = document.getElementById('progress-bar');
+
+            if (qNum) qNum.innerText = `Soal ${state.currentIdx + 1} dari ${quizQuestions.length}`;
+            if (qCat) qCat.innerText = q.category;
+            if (qText) qText.innerText = q.question;
+
+            const progressPct = ((state.currentIdx) / quizQuestions.length) * 100;
+            if (pBar) pBar.style.width = `${progressPct}%`;
+
+            const answersGrid = document.getElementById('answers-grid');
+            if (!answersGrid) return;
+            answersGrid.innerHTML = '';
+
+            const optionLabels = ['A', 'B', 'C', 'D'];
+
+            q.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `w-full bg-slate-50 hover:bg-sky-50 border-2 border-slate-200 hover:border-sky-400 p-3 sm:p-3.5 rounded-2xl text-left font-semibold text-slate-800 shadow-sm transition active:scale-98 flex items-start gap-3 group`;
+
+                btn.innerHTML = `
+                    <span class="w-7 h-7 rounded-xl bg-slate-200 group-hover:bg-sky-500 group-hover:text-white font-game text-xs text-slate-700 flex items-center justify-center flex-shrink-0 transition">
+                        ${optionLabels[idx]}
+                    </span>
+                    <span class="text-xs sm:text-sm leading-snug my-auto">${optText}</span>
+                `;
+
+                btn.addEventListener('click', () => handleAnswer(idx));
+                answersGrid.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(selectedIndex) {
+            sound.init();
+            const q = quizQuestions[state.currentIdx];
+            const isCorrect = selectedIndex === q.correct;
+
+            state.answersHistory.push({
+                question: q.question,
+                selected: q.options[selectedIndex],
+                correctAnswer: q.options[q.correct],
+                isCorrect: isCorrect,
+                explanation: q.explanation
+            });
+
+            const feedbackIcon = document.getElementById('feedback-icon');
+            const feedbackTitle = document.getElementById('feedback-title');
+            const feedbackExp = document.getElementById('feedback-explanation');
+
+            if (isCorrect) {
+                sound.correct();
+                state.score += 50;
+                state.correctCount++;
+                if (feedbackIcon) feedbackIcon.innerText = '🎉';
+                if (feedbackTitle) {
+                    feedbackTitle.innerText = 'Jawaban Benar!';
+                    feedbackTitle.className = 'font-game text-2xl text-emerald-600 mb-2';
+                }
+            } else {
+                sound.wrong();
+                state.fuel--; // Wrong answer loses 1 life!
+                if (feedbackIcon) feedbackIcon.innerText = '💔';
+                if (feedbackTitle) {
+                    feedbackTitle.innerText = 'Jawaban Salah! (-1 Nyawa)';
+                    feedbackTitle.className = 'font-game text-2xl text-rose-600 mb-2';
+                }
+            }
+
+            updateHUD();
+            if (feedbackExp) feedbackExp.innerText = q.explanation;
+            if (screenQuiz) screenQuiz.classList.add('hidden');
+            if (modalFeedback) modalFeedback.classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            sound.click();
+            if (modalFeedback) modalFeedback.classList.add('hidden');
+            state.isQuestionActive = false;
+            state.currentIdx++;
+
+            if (state.fuel <= 0 || state.currentIdx >= quizQuestions.length) {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            state.isPlaying = false;
+            state.isQuestionActive = false;
+
+            if (screenQuiz) screenQuiz.classList.add('hidden');
+            if (touchControls) touchControls.classList.add('hidden');
+            if (screenResult) screenResult.classList.remove('hidden');
+
+            const resultTitle = document.getElementById('result-title');
+            const resultSubtitle = document.getElementById('result-subtitle');
+            const resultBadge = document.getElementById('result-badge');
+            const starRating = document.getElementById('star-rating');
+
+            const scoreEl = document.getElementById('final-score');
+            const correctEl = document.getElementById('final-correct');
+
+            if (scoreEl) scoreEl.innerText = state.score;
+            if (correctEl) correctEl.innerText = `${state.correctCount} / ${quizQuestions.length}`;
+
+            let stars = 3;
+            if (state.correctCount < 5) stars = 1;
+            else if (state.correctCount < 8) stars = 2;
+
+            if (starRating) {
+                starRating.innerHTML = '';
+                for (let i = 0; i < 3; i++) {
+                    const star = document.createElement('i');
+                    if (i < stars) {
+                        star.className = 'fa-solid fa-star text-amber-400';
+                    } else {
+                        star.className = 'fa-regular fa-star text-slate-300';
+                    }
+                    starRating.appendChild(star);
+                }
+            }
+
+            if (state.fuel <= 0) {
+                sound.wrong();
+                if (resultBadge) resultBadge.innerText = '🛬';
+                if (resultTitle) resultTitle.innerText = 'Pesawat Jatuh!';
+                if (resultSubtitle) resultSubtitle.innerText = 'Nyawa kamu habis. Yuk pelajari materi dan coba lagi!';
+            } else {
+                sound.victory();
+                if (resultBadge) resultBadge.innerText = '🏁';
+                if (resultTitle) resultTitle.innerText = 'Sampai Di Puncak Finish!';
+                if (resultSubtitle) resultSubtitle.innerText = 'Selamat! Kamu berhasil menuntaskan penerbangan dan soal IPAS!';
+            }
+        }
+
+        function openReviewModal() {
+            sound.click();
+            const reviewList = document.getElementById('review-list');
+            if (!reviewList) return;
+            reviewList.innerHTML = '';
+
+            quizQuestions.forEach((q, idx) => {
+                const userAns = state.answersHistory[idx];
+                const item = document.createElement('div');
+                item.className = `p-3.5 rounded-2xl border ${userAns && userAns.isCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`;
+
+                item.innerHTML = `
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="font-bold text-xs ${userAns && userAns.isCorrect ? 'text-emerald-700' : 'text-rose-700'}">
+                            Soal ${idx + 1}: ${q.category}
+                        </span>
+                        <span class="text-xs font-bold ${userAns && userAns.isCorrect ? 'text-emerald-600' : 'text-rose-600'}">
+                            ${userAns && userAns.isCorrect ? '✓ Benar' : '✗ Salah'}
+                        </span>
+                    </div>
+                    <p class="font-semibold text-slate-800 text-xs sm:text-sm mb-2">${q.question}</p>
+                    <div class="bg-white/90 p-2.5 rounded-xl text-xs text-slate-600 space-y-1 border border-slate-200">
+                        <div><b class="text-slate-700">Jawaban Tepat:</b> ${q.options[q.correct]}</div>
+                        <div class="text-sky-800"><b class="text-sky-900">Pembelajaran:</b> ${q.explanation}</div>
+                    </div>
+                `;
+                reviewList.appendChild(item);
+            });
+
+            if (modalReview) modalReview.classList.remove('hidden');
+        }
+
+        function bindClick(id, handler) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('click', handler);
+            }
+        }
+
+        function toggleFullscreen() {
+            sound.click();
+            const doc = window.document;
+            const docEl = doc.documentElement;
+
+            if (!doc.fullscreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+                if (docEl.requestFullscreen) {
+                    docEl.requestFullscreen().catch(() => {});
+                } else if (docEl.webkitRequestFullscreen) {
+                    docEl.webkitRequestFullscreen();
+                } else if (docEl.msRequestFullscreen) {
+                    docEl.msRequestFullscreen();
+                }
+            } else {
+                if (doc.exitFullscreen) {
+                    doc.exitFullscreen().catch(() => {});
+                } else if (doc.webkitExitFullscreen) {
+                    doc.webkitExitFullscreen();
+                } else if (doc.msExitFullscreen) {
+                    doc.msExitFullscreen();
+                }
+            }
+        }
+
+        function updateFullscreenIcon() {
+            const btnFS = document.getElementById('btn-fullscreen');
+            if (!btnFS) return;
+            const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+            btnFS.innerHTML = isFS ? 
+                '<i class="fa-solid fa-compress text-xs sm:text-sm"></i>' : 
+                '<i class="fa-solid fa-expand text-xs sm:text-sm"></i>';
+        }
+
+        document.addEventListener('fullscreenchange', updateFullscreenIcon);
+        document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
+
+        window.onload = function() {
+            resizeCanvas();
+            initClouds();
+            animateCanvas();
+
+            // Bind touch control buttons for 4-directional navigation
+            bindTouchControl('btn-up', (active) => { keys.ArrowUp = active; });
+            bindTouchControl('btn-down', (active) => { keys.ArrowDown = active; });
+            bindTouchControl('btn-left', (active) => { keys.ArrowLeft = active; });
+            bindTouchControl('btn-right', (active) => { keys.ArrowRight = active; });
+            
+            const btnShoot = document.getElementById('btn-shoot');
+            if (btnShoot) {
+                btnShoot.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    shootBullet();
+                });
+                btnShoot.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    shootBullet();
+                });
+            }
+
+            // Aircraft selection controls
+            document.querySelectorAll('.plane-select-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    sound.click();
+                    document.querySelectorAll('.plane-select-btn').forEach(b => {
+                        b.classList.remove('border-sky-500');
+                        b.classList.add('border-transparent');
+                    });
+                    const target = e.currentTarget;
+                    target.classList.remove('border-transparent');
+                    target.classList.add('border-sky-500');
+                    state.planeType = target.getAttribute('data-plane');
+                });
+            });
+
+            // Action Buttons
+            bindClick('btn-start', startGame);
+            bindClick('btn-next-question', nextQuestion);
+            bindClick('btn-restart', startGame);
+            bindClick('btn-review', openReviewModal);
+            bindClick('btn-close-review', () => {
+                sound.click();
+                if (modalReview) modalReview.classList.add('hidden');
+            });
+
+            // Fullscreen Toggle
+            bindClick('btn-fullscreen', toggleFullscreen);
+
+            // Audio Toggle
+            const audioBtn = document.getElementById('btn-audio');
+            if (audioBtn) {
+                audioBtn.addEventListener('click', () => {
+                    sound.enabled = !sound.enabled;
+                    audioBtn.innerHTML = sound.enabled ? 
+                        '<i class="fa-solid fa-volume-high text-xs sm:text-sm"></i>' : 
+                        '<i class="fa-solid fa-volume-xmark text-xs sm:text-sm text-rose-500"></i>';
+                });
+            }
+        };
+    </script>
+</body>
+</html>
